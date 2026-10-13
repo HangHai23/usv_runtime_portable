@@ -1,0 +1,23 @@
+rc_differential_mixer:
+  ros__parameters:
+    # Only these two CRSF channels participate in propulsion control.
+    # CH1, CH3 and CH9..CH16 are ignored, as are all other unused channels.
+    throttle_channel: 2
+    steering_channel: 4
+
+    minimum_us: 1000
+    center_us: 1500
+    maximum_us: 2000
+    throttle_deadband_us: 20
+    steering_deadband_us: 20
+
+    # Reverse an RC input direction without changing transmitter settings.
+    throttle_reversed: false
+    steering_reversed: false
+
+    # Output 1 is currently the left motor; output 2 is the right motor.
+    # Use these only if a motor's physical forward direction is inverted.
+    left_motor_reversed: false
+    right_motor_reversed: false
+
+    maximum_message_age: 0.2

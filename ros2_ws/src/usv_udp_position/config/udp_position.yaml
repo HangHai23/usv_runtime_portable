@@ -1,0 +1,30 @@
+udp_position_receiver:
+  ros__parameters:
+    # 监听全部网卡；发送端将UDP报文发往Jetson的局域网IP。
+    bind_address: "0.0.0.0"
+    # UDP目标端口，必须与macUDP设置一致。
+    port: 5700
+    # 接收仍每5ms轮询；观测以30Hz发布，避免相同帧以200Hz淹没导航和网页。
+    observation_publish_rate_hz: 30.0
+    # 每次UDP轮询最多占用2ms，突发报文不能长时间霸占节点。
+    poll_budget_ms: 2.0
+    # 必填Mac IPv4地址；空字符串拒绝全部数据。UDP来源IP不是身份认证。
+    allowed_sender_ip: "127.0.0.1"  # 部署前必须改为实际Mac IPv4；不能填Jetson目标地址
+    # 默认全局笛卡尔坐标系；单位米，不把经纬度当作x/y。
+    frame_id: map
+    # 发布含测量时间和接收时间的全局位置消息。
+    output_topic: /usv/global_position
+    # 本船AprilTag ID。
+    boat_id: 0
+    # 标签0/1边朝向到船头的逆时针偏角，度。
+    tag_to_body_heading_deg: 0.0
+    # 标签到定位参考点的偏移，船头为X左侧为Y，米；融合时参考点应为IMU。
+    tag_to_body_xy_m: [0.0, 0.0]
+    # 标定完成后开启融合位置发布；默认只发布完整观测及有效性。
+    publish_position: false
+    # 实测确认Mac和Jetson Unix时钟同步后设true。
+    clock_synchronized: false
+    # 检测完成到实际测量时刻的实测时间差，毫秒。0仅为处理时刻近似。
+    processed_to_measurement_ms: 0.0
+    # 时钟同步后允许的最大网络延迟，毫秒。
+    maximum_network_delay_ms: 100.0

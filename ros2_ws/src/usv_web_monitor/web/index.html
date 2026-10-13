@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <title>航行控制台 · USV Monitor</title>
+    <meta name="description" content="无人船航行状态与 Jetson 健康度实时监控" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/assets/console-v2.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#system-safety" aria-label="返回系统与安全">
+        <span class="brand-mark" aria-hidden="true"></span><span>航行控制台</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="/" aria-current="page">实时监控</a>
+        <a href="/global">全局导航 ↗</a>
+        <a href="#system-safety">系统与安全</a>
+        <a href="#vision-tracking">视觉追踪</a>
+        <a href="#navigation-data">动力与链路</a>
+      </nav>
+      <div class="connection-chip" id="connectionChip">
+        <span class="status-dot"></span><span id="connectionText">未连接</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="section zone-section system-zone" id="system-safety" aria-labelledby="systemSafetyTitle">
+        <div class="section-heading zone-heading">
+          <div><p class="label">SYSTEM · SAFETY</p><h2 id="systemSafetyTitle">系统与安全</h2></div>
+          <p class="section-note">计算平台健康度与底层保护集中呈现</p>
+        </div>
+        <div class="vessel-status-strip">
+          <div class="vessel-identity">
+            <span class="vessel-dot" aria-hidden="true"></span>
+            <div><small>USV 01</small><strong id="vesselState">等待遥测</strong></div>
+          </div>
+          <div class="mode-pill unknown" id="modePill">
+            <span class="mode-icon" aria-hidden="true"></span><span id="modeText">模式未知</span>
+          </div>
+          <div class="updated" id="updatedText">尚未收到 ROS 数据</div>
+        </div>
+        <div class="system-safety-grid">
+        <article class="system-console">
+          <div class="console-heading">
+            <div><p class="console-kicker">计算平台</p><h2>Jetson Orin Nano</h2></div>
+            <span class="device-status" id="deviceStatus"><i></i>读取中</span>
+          </div>
+          <div class="system-metrics">
+            <div class="system-metric memory-metric">
+              <div class="mini-ring" id="memoryRing"><strong id="memoryValue">—</strong><span>%</span></div>
+              <div><span>内存</span><small id="memoryDetail">等待数据</small></div>
+            </div>
+            <div class="system-metric temperature-metric">
+              <div class="metric-symbol temperature-symbol"><b></b></div>
+              <div><strong id="cpuTempValue">—</strong><span>处理器温度</span><small id="tempState">等待传感器</small></div>
+            </div>
+            <div class="system-metric current-metric">
+              <div class="metric-symbol current-symbol">A</div>
+              <div><strong id="currentValue">—</strong><span>模块总电流</span><small id="currentRail">等待 INA3221</small></div>
+            </div>
+            <div class="system-metric power-metric">
+              <div class="metric-symbol power-symbol">⌁</div>
+              <div><strong id="powerValue">—</strong><span>模块总功耗</span><small id="powerDetail">5V 模块轨，非外部19V</small></div>
+            </div>
+          </div>
+          <div class="system-footer">
+            <div class="cpu-load">
+              <span>CPU 使用率</span><div class="slim-track"><i id="cpuUsageBar"></i></div><strong id="cpuUsageValue">—</strong>
+            </div>
+            <span class="uptime" id="uptimeValue">运行时间 —</span>
+          </div>
+        </article>
+        <article class="card safety-card">
+          <div class="card-heading">
+            <div><p class="label">底层保护</p><h3 id="safetyHeadline">等待执行器</h3></div>
+            <div class="safety-orb unknown" id="safetyOrb" aria-hidden="true"></div>
+          </div>
+          <div class="safety-list">
+            <div class="safety-item"><span class="item-icon stop">!</span><div><strong>紧急停止</strong><span>RC 通道 5 底层保护</span></div><span class="state-badge unknown" id="estopState">未知</span></div>
+            <div class="safety-item"><span class="item-icon timer">◷</span><div><strong>命令看门狗</strong><span>动力命令超时保护</span></div><span class="state-badge unknown" id="watchdogState">未知</span></div>
+            <div class="safety-item"><span class="item-icon dry">◇</span><div><strong>硬件输出</strong><span>Dry-run 模拟状态</span></div><span class="state-badge unknown" id="dryRunState">未知</span></div>
+          </div>
+        </article>
+        </div>
+      </section>
+
+      <section class="section zone-section vision-section" id="vision-tracking" aria-labelledby="visionTitle">
+        <div class="section-heading compact-heading">
+          <div><p class="label">VISION · TRACKING</p><h2 id="visionTitle">视觉追踪</h2></div>
+          <span class="vision-status waiting" id="visionStatus"><i></i>等待推理</span>
+        </div>
+        <div class="vision-layout">
+          <article class="vision-viewer">
+            <img id="visionStream" src="/vision/stream.mjpg" alt="YOLO红球实时推理画面" />
+            <div class="vision-empty" id="visionEmpty">
+              <span class="vision-empty-icon">◎</span>
+              <strong>等待推理画面</strong>
+              <small>启动摄像头与YOLO节点后自动显示</small>
+            </div>
+            <div class="vision-overlay">
+              <span id="visionResolution">— × —</span>
+              <span id="visionFrameAge">画面未连接</span>
+            </div>
+          </article>
+          <article class="vision-console">
+            <div class="vision-target-heading">
+              <div><small>当前目标</small><strong id="visionClass">未检测</strong></div>
+              <div class="confidence-pill"><span>置信度</span><strong id="visionConfidence">—</strong></div>
+            </div>
+            <div class="bearing-readout">
+              <span>估计方位偏差</span>
+              <div><strong id="bearingAngle">—</strong><b>°</b></div>
+              <small id="bearingDirection">等待目标状态</small>
+            </div>
+            <div class="bearing-scale" aria-label="目标水平角度偏差">
+              <span>左</span><div class="bearing-track"><i></i><b id="bearingIndicator"></b></div><span>右</span>
+            </div>
+            <div class="vision-metrics">
+              <div><span>追踪状态</span><strong id="trackingMode">—</strong></div>
+              <div><span>检测耗时</span><strong id="inferenceTime">—</strong></div>
+              <div><span>实际偏航角速度</span><strong id="yawRate">—</strong></div>
+              <div><span>期望偏航角速度</span><strong id="desiredYawRate">—</strong></div>
+              <div><span>检测年龄</span><strong id="detectionAge">—</strong></div>
+              <div><span>IMU补偿</span><strong id="imuVisionState">—</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section zone-section operations-section" id="navigation-data" aria-labelledby="operationsTitle">
+        <div class="section-heading compact-heading">
+          <div><p class="label">航行与链路</p><h2 id="operationsTitle">动力与无线状态</h2></div>
+          <div class="source-chip">动力来源 <strong id="sourceValue">—</strong></div>
+        </div>
+        <div class="navigation-grid">
+          <div class="control-column">
+            <article class="card signal-card">
+            <div class="card-heading">
+              <div><p class="label">链路质量</p><h3>遥控上行</h3></div><span class="tag" id="linkTag">等待中</span>
+            </div>
+            <div class="signal-body">
+              <div class="quality-ring" id="qualityRing"><div class="ring-center"><strong id="qualityValue">—</strong><span>% LQ</span></div></div>
+              <div class="signal-summary">
+                <div><strong id="rssiValue">—</strong><span>RSSI · dBm</span></div>
+                <div><strong id="snrValue">—</strong><span>SNR · dB</span></div>
+              </div>
+            </div>
+            <div class="sparkline-wrap">
+              <canvas id="signalChart" aria-label="最近信号强度趋势"></canvas>
+              <div class="chart-caption"><span>最近 30 秒</span><span>RSSI 越高越好</span></div>
+            </div>
+            </article>
+            <div class="propulsion-settings" id="propulsionSettings">
+              <div class="settings-heading">
+                <div><strong>运行参数</strong><span>立即作用于手动与自动动力</span></div>
+                <span class="settings-status" id="settingsStatus">读取中</span>
+              </div>
+              <div class="settings-fields">
+                <label>
+                  <span>全局动力限幅</span>
+                  <span class="number-field"><input id="limitInput" type="number" min="0" max="100" step="1" inputmode="decimal" /><b>%</b></span>
+                </label>
+                <label>
+                  <span>左电机微调</span>
+                  <span class="number-field"><input id="leftTrimInput" type="number" min="-100" max="100" step="0.5" inputmode="decimal" /><b>%</b></span>
+                </label>
+                <label>
+                  <span>右电机微调</span>
+                  <span class="number-field"><input id="rightTrimInput" type="number" min="-100" max="100" step="0.5" inputmode="decimal" /><b>%</b></span>
+                </label>
+              </div>
+              <div class="settings-actions">
+                <p>当前值来自运行节点；重启后重新读取 YAML。</p>
+                <button id="applySettingsButton" type="button">应用设置</button>
+              </div>
+            </div>
+          </div>
+          <div class="propulsion-panel" id="propulsion">
+            <div class="subsection-heading">
+              <div><p class="label">推进系统</p><h3>真实动力输出</h3></div>
+              <p>底层实际执行结果</p>
+            </div>
+            <div class="propulsion-grid">
+          <article class="motor-card">
+            <div class="motor-header"><span>左舷电机</span><span>CH 1</span></div>
+            <div class="motor-value"><strong id="leftApplied">—</strong><span>%</span></div>
+            <div class="thrust-track" aria-label="左舷电机输出"><div class="center-line"></div><div class="thrust-fill" id="leftBar"></div></div>
+            <div class="motor-details"><span>请求 <strong id="leftRequested">—</strong></span><span>PWM <strong id="leftPwm">—</strong></span></div>
+          </article>
+          <article class="motor-card">
+            <div class="motor-header"><span>右舷电机</span><span>CH 2</span></div>
+            <div class="motor-value"><strong id="rightApplied">—</strong><span>%</span></div>
+            <div class="thrust-track" aria-label="右舷电机输出"><div class="center-line"></div><div class="thrust-fill" id="rightBar"></div></div>
+            <div class="motor-details"><span>请求 <strong id="rightRequested">—</strong></span><span>PWM <strong id="rightPwm">—</strong></span></div>
+          </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="radio-section" id="radio">
+          <div class="subsection-heading radio-heading">
+            <div><p class="label">ExpressLRS · CRSF</p><h3>无线链路详情</h3></div><div class="frequency" id="frameRate">— Hz</div>
+          </div>
+          <div class="detail-grid">
+            <article class="detail-card featured"><span>上行 RSSI</span><strong id="detailRssi">—</strong><small>dBm · 天线 1</small></article>
+            <article class="detail-card"><span>链路质量</span><strong id="detailLq">—</strong><small>% LQ</small></article>
+            <article class="detail-card"><span>信噪比</span><strong id="detailSnr">—</strong><small>dB SNR</small></article>
+            <article class="detail-card"><span>射频模式</span><strong id="rfMode">—</strong><small>CRSF 原始代码</small></article>
+            <article class="detail-card"><span>有效帧</span><strong id="validFrames">—</strong><small>累计接收</small></article>
+            <article class="detail-card"><span>CRC 错误</span><strong id="crcErrors">—</strong><small id="crcNote">等待数据</small></article>
+          </div>
+          <div class="notice" id="downlinkNotice"><span class="notice-icon">i</span><p><strong>下行遥测尚未报告。</strong>上行遥控状态不受影响；零值通常表示接收机未提供下行统计。</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>USV Monitor</span><span>局域网遥测 · 受限参数控制</span><span id="footerAddress">Jetson ROS 2</span></footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+yolo_detector:
+  ros__parameters:
+    # FP16 TensorRT engine built locally on this Jetson (TRT 10.3, batch 1).
+    engine_path: models/red_ball_yolo11n.onnx  # 原版Nano默认ONNX CPU；彩球使用models/colored_ball_v2_yolo11n.onnx
+    onnx_threads: 2  # 预留CPU给IMU/遥控/控制与网页，不将推理线程开满
+    image_topic: /camera/image_raw
+    detection_topic: /ball/detection
+    debug_image_topic: /ball/debug_image
+
+    # 当前红球模型：0 = redball；彩球模型也是类别0（water_ball）。
+    target_class_id: 0
+    confidence_threshold: 0.50
+    iou_threshold: 0.45
+    image_size: 640
+    maximum_detections: 20
+    device: cpu
+
+    # Debug images consume additional CPU and ROS bandwidth; disabled normally.
+    # Required by usv_web_monitor's inference-view module.
+    publish_debug_image: true
+    model_retry_interval: 5.0

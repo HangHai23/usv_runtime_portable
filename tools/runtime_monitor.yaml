@@ -1,0 +1,26 @@
+# 联合脚本自动创建每次运行的独立系统日志目录；不会覆盖历史记录。
+log_directory: ~/Downloads/usv_mission_system_logs
+# /proc采样周期（秒）；避免高频监控增加系统负担。
+sample_interval_sec: 1.0
+# 进程日志文件关联、温度采样周期（秒）。
+process_detail_interval_sec: 5.0
+# localhost网页健康检查超时（秒），独立线程执行，不阻塞系统采样。
+web_timeout_sec: 0.5
+# 启动宽限时间（秒），此期间不标记网页未响应。
+startup_grace_sec: 10.0
+# 总CPU忙碌百分比告警阈值；各节点CPU以单核100%计。
+system_cpu_warning_percent: 95.0
+# 可用内存告警阈值（MiB）。
+memory_available_warning_mb: 512.0
+# I/O压力PSI some avg10告警阈值（百分比）。
+io_pressure_warning_percent: 20.0
+# 同一节点持续处于不可中断等待D状态的告警时间（秒）。
+process_blocked_warning_sec: 2.0
+# 网页连续失败几次后标记未响应。
+web_failure_warning_count: 3
+# 网页ROS回调循环未更新告警阈值（毫秒）。
+ros_loop_warning_ms: 1000.0
+# 系统采样间隔过长告警阈值（秒）。
+sample_gap_warning_sec: 2.5
+# 收集本次运行期间内核日志；权限不足只记录失败，不要求sudo。
+kernel_logging_enabled: true

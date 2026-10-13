@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>usv_pwm_actuator</name>
+  <version>0.1.0</version>
+  <description>Safe dual-channel propulsion command to I2C or UART PWM controller driver.</description>
+  <maintainer email="hai@example.com">hai</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>usv_interfaces</exec_depend>
+  <exec_depend>python3-serial</exec_depend>
+  <exec_depend>python3-smbus</exec_depend>
+
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

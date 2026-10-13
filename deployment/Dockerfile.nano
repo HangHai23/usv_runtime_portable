@@ -1,0 +1,15 @@
+FROM ros:humble-ros-base-jammy
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential python3-pip python3-colcon-common-extensions python3-yaml \
+    python3-opencv python3-aiohttp python3-serial python3-smbus python3-numpy \
+    ros-humble-cv-bridge ros-humble-tf2-ros ros-humble-common-interfaces ros-humble-rosidl-default-generators \
+    iproute2 curl i2c-tools v4l-utils procps && rm -rf /var/lib/apt/lists/*
+COPY deployment/requirements-cpu.txt /tmp/requirements-cpu.txt
+RUN python3 -m pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements-cpu.txt
+COPY vendor/imu/YbImuLib /tmp/YbImuLib
+RUN python3 -m pip install --no-cache-dir /tmp/YbImuLib
+WORKDIR /workspace/usv_runtime_portable
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["bash"]

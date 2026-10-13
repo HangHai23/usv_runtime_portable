@@ -1,0 +1,53 @@
+ball_follow_controller:
+  ros__parameters:
+    # 目标状态输入话题：由 target_state_estimator 发布目标偏角、跟踪状态等数据。
+    target_topic: /ball/target_state
+    # IMU输入话题：读取Z轴角速度，作为船体实际偏航角速度反馈。
+    imu_topic: /imu/data_raw
+    # 自动动力输出话题：发布左右电机动力百分比，随后进入模式仲裁器。
+    output_topic: /propulsion/automatic_command
+    enable_topic: ""  # 独立追球始终启用；联合任务由启动文件设置任务使能话题，未选中时清零缓升状态
+
+    # 使用导航同款动力模型；下列为当前导航参数副本，导航后续修改时需同步。
+    navigation_model_enabled: true
+    bidirectional_enabled: true  # 允许自动差速内侧倒转；0动力由执行器映射1500us
+    cruise_speed_m_s: 1.6892  # 恢复原巡航目标，居中约80%共同动力；实际速度由实船决定
+    speed_gain_m_s_per_us: 0.00415  # 有效PWM增量到前进速度的模型增益，m/s/us
+    turn_gain_rad_s_per_us: 0.00335  # 左右有效PWM差到角速度的模型增益，rad/s/us
+    command_span_us: 500.0  # 双向电调，1500到2000/1000均为500us
+    yaw_feedback_gain: 1.9  # 增强模型模式实际生效的角速度反馈，优先建立左右动力差
+
+    # 目标偏角死区，单位rad；当前0.035约为2°，减小后小偏差响应更灵敏，但更容易抖动。
+    bearing_deadband_rad: 0.035
+    # 偏角外环比例增益：把目标偏角转换为期望偏航角速度；调大后转向更积极。
+    bearing_kp: 3.8  # 提高小中偏角转向响应，在接近小球过程中更快对准
+    # 期望偏航角速度上限，单位rad/s；限制大角度目标对应的最高转向速度。
+    maximum_yaw_rate_rad_s: 1.2  # 提高目标转速至约86度/秒；实际能力受电机及船体限制
+
+    # 角速度内环比例增益：根据“期望角速度-IMU实际角速度”计算差速转向量。
+    yaw_rate_kp: 66.0  # 大偏角且静止时单侧请求最高约73%，增强对准动力；不是导航PWM增益的直接复制
+    yaw_brake_preview_sec: 0.45  # 缩短提前制动，避免尚未对准就过早压低转向动力
+    # 最大差速转向量，单位%；调大可增强转向，但过大会导致过冲或振荡。
+    maximum_steering_percent: 100.0
+    # IMU偏航角速度方向反转：内部约定右转为正，而当前ROS IMU左转为正，因此设为true。
+    imu_yaw_rate_reversed: true
+    # 最终转向指令方向反转；若目标在右侧时船却向左转，将此值取反。
+    steering_reversed: false
+
+    # 百分比巡航仅用于旧控制模式；偏角减速在两种模式下均生效。
+    cruise_throttle_percent: 100.0
+    # 转向减速角，单位rad；偏角从0增至该值时，前进动力线性降至0。
+    steering_slowdown_angle_rad: 1.20  # 放宽减速：偏角10度约保留85%共同动力，20度约保留71%；极大偏角仍单侧对准
+    # 停船目标框面积比例；目标框占画面比例达到该值时前进动力降为0。
+    stop_area_ratio: 0.40  # 高于拿球面积0.35，避免确认前停动力；联合任务近球最低推进保护仍生效
+    # 短时未检测到目标、处于预测状态时的前进动力倍率；0.30表示保留30%。
+    predicting_throttle_scale: 1.0  # 不因短时预测降低动力；完全丢失目标或超时仍停机
+
+    # 动力变化斜率上限，单位%/s；调大响应更快，调小输出更平滑。丢失目标归零不受此限制。
+    output_slew_rate_percent_s: 80.0  # 加快差速建立和内侧电机降动力，避免持续高速冲向小球
+    # 目标状态消息超时，单位s；超过该时间未收到目标状态则立即输出零动力。
+    target_timeout: 0.20
+    # IMU消息超时，单位s；超过该时间未收到IMU数据则立即输出零动力。
+    imu_timeout: 0.20
+    # 控制器计算与自动动力发布频率，单位Hz。
+    output_rate: 20.0

@@ -1,0 +1,15 @@
+control_mode_arbiter:
+  ros__parameters:
+    # CH8 low selects RC manual control; CH8 high selects automatic navigation.
+    mode_channel: 8
+    automatic_above_us: 1500
+
+    # Every control source is fail-silent: stale input always becomes neutral.
+    rc_timeout: 0.5
+    manual_command_timeout: 0.2
+    automatic_command_timeout: 0.2
+    output_rate: 50.0
+
+    # Bench testing only. True bypasses RC-link and CH5/CH8 supervision.
+    # Always leave false for normal operation on the water.
+    force_automatic_without_rc: false

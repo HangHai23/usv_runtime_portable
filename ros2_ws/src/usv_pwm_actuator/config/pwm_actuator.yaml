@@ -1,0 +1,49 @@
+pwm_actuator:
+  ros__parameters:
+    # 当前双向电调；急停、断联和超时均回1500us，正负动力支持前后推进。
+    forward_only: false  # 双向：-100%=1000us，0%=1500us，+100%=2000us
+    # 以下单向参数在forward_only=false时不生效，仅保留历史配置。
+    # 当前1190/1100：100%请求等增量810us，左2000、右1910us；不突破2000us硬件边界。
+    unidirectional_equal_pulse_increment: true
+    # 单向独立启动阈值；非零动力分别从此脉宽开始。
+    channel_1_unidirectional_start_us: 1190
+    channel_2_unidirectional_start_us: 1100
+    backend: i2c
+    i2c_bus: 1  # 原版Nano候选总线；必须按实际接线和i2cdetect确认，不沿用Orin的7
+    i2c_address: 45  # 0x2D
+
+    # Used only when backend is uart.
+    port: /dev/ttyTHS2
+    baudrate: 9600
+    channel_1: 1
+    channel_2: 2
+    output_rate: 20.0
+    command_timeout: 0.5
+    # I2C writes do not need an artificial delay between left and right motors.
+    inter_command_delay: 0.0
+
+    # Global final-output safety limit. Input -100..100% is linearly mapped
+    # to -output_limit_percent..+output_limit_percent.
+    output_limit_percent: 100.0
+
+    # Per-channel multiplicative gain trim. For example, -5.0 reduces that
+    # channel's post-limit demand by 5%. Zero command always remains neutral.
+    channel_1_trim_percent: 0.0
+    channel_2_trim_percent: 0.0
+
+    # Per-ESC startup deadband compensation. Keep 1500 to disable compensation,
+    # then replace with measured stable-start pulse widths for each direction.
+    # PWM channel 1 is the left motor; channel 2 is the right motor.
+    channel_1_forward_start_us: 1500
+    channel_2_forward_start_us: 1500
+    channel_1_reverse_start_us: 1500
+    channel_2_reverse_start_us: 1500
+
+    # Bottom-level RC emergency stop. CH5 high immediately forces both outputs
+    # to neutral (1500 us), regardless of the propulsion-command source.
+    emergency_stop_enabled: true
+    emergency_stop_channel: 5
+    emergency_stop_threshold_us: 1500
+    emergency_stop_rc_timeout: 0.5
+
+    dry_run: false

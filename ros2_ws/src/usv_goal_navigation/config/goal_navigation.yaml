@@ -1,0 +1,104 @@
+goal_navigation:
+  ros__parameters:
+    goal_alignment_distance_m: 1.5  # 门前1米内渐增正对球门修正，单独导航与联合送球共用
+    goal_alignment_kp: 1.6  # 附加修正增益，原0.8提高50%；按船头与门法线偏角计算
+    goal_alignment_max_yaw_rate_rad_s: 0.8  # 附加修正上限，原0.6提高；最终仍受总角速度上限约束
+    bidirectional_enabled: true  # 硬件与PWM反馈为双向；是否允许导航倒转由下方独立限制控制
+    command_forward_only: true  # 单独导航与联合送球一致：两侧动力>=0，最多内侧停转；手动不受影响
+    goal_entry_depth_m: 0.5  # 穿过选定球门门线后深入0.5米，停止动力（不保证船体立即停止）
+    goal_post_margin_m: 0.4  # 门柱内侧安全余量；按船宽和定位误差核对
+    map_smoothing_gain: 0.1  # 同坐标系地图小幅更新权重；缓存不因丢包失效
+    map_update_tolerance_m: 0.5  # 地图尺寸/球门单次允许变化；超过则保留原缓存
+    prediction_slow_after_sec: 1.0  # 定位缺测达到此秒数显示降级并降低目标速度
+    # ROS接口；正式脚本将command_topic切换到自动仲裁输入。
+    observation_topic: /vision/global_observation
+    imu_topic: /imu/data_raw
+    command_topic: /navigation/test_command
+    status_topic: /navigation/status
+    # 场地左/右球门；每次切自动时锁定本航次球门，手动模式也可在网页选择。
+    goal_side: left
+    # 默认只计算；正式脚本显式启用输出，仍受CH8仲裁和CH5急停约束。
+    armed: false
+    # 正式运行必须等CH8自动位；独立无输出测试可设false。
+    require_mode: true
+    # 20261001_160703日志：0.3/0.6/1秒积分窗口拟合约0.19~0.20秒。
+    # 视觉相对IMU的有效运动滞后，不是独立网络时延。
+    measurement_delay_sec: 0.2
+    # 按用户要求：新视觉位置中断10秒后停机；重复帧不刷新计时。
+    max_prediction_sec: 10.0
+    # IMU、执行器状态、模式状态本地超时，秒。
+    imu_timeout: 0.3
+    pwm_timeout: 0.5
+    mode_timeout: 0.3
+    # 控制发布频率；状态预测跟随IMU回调执行。
+    output_rate: 20.0
+    # 统一成场地逆时针为正；零偏以rad/s填写，静水漂动均值不直接扣除。
+    # 此全局场地航向与原始IMU同号，日志相关系数约0.98；不能沿用图像追踪的符号设置。
+    imu_yaw_rate_reversed: false
+    imu_bias_rad_s: 0.0
+    # 延迟视觉在历史时刻修正预测误差的比例，0~1；不是传感器精度或全程固定占比。
+    # 视觉提供绝对位置/航向锚点；IMU及动力模型用于观测间预测。
+    position_correction_gain: 0.80  # 每次吸收80%的位置误差；视觉速度修正也共用此权重
+    heading_correction_gain: 0.65  # 每次吸收65%的航向误差；大漂移由连续视觉确认后重定位
+    # 过大创新量/视觉速度视作离群观测，不清空预测。
+    maximum_position_innovation_m: 4.0
+    maximum_visual_speed_m_s: 3.0
+    # 20261001_160703首次实船日志拟合的候选模型，仍需下一轮实船验证。
+    # 平均有效PWM每增加1us对应的稳态前进速度，m/s/us。
+    speed_gain_m_s_per_us: 0.00415
+    # 右减左有效PWM每增加1us对应的稳态逆时针角速度，rad/s/us。
+    turn_gain_rad_s_per_us: 0.00335
+    # 一阶速度/转向响应时间常数，秒；转向常数用于仿真和离线拟合。
+    speed_time_constant_sec: 2.7
+    yaw_time_constant_sec: 1.1
+    # 必须与执行器真实启动阈值一致。读取当前配置发现右侧已是1100。
+    left_start_us: 1500.0
+    right_start_us: 1500.0
+    # 当前全局100%、等增量映射：2000-max(1190,1100)=810us。
+    # 执行器限幅/阈值/微调变化后需核对此参数；预测始终读取实际PWM状态。
+    command_span_us: 500.0  # 单侧从停止到满前进/满后退的PWM增量
+    # 右电机比左电机快时逆时针转为+1，实际安装相反时设-1。
+    motor_turn_sign: 1.0
+    # 显示用保守误差尺度（不是卡尔曼协方差），米、米/秒。
+    uncertainty_initial_m: 0.2
+    uncertainty_growth_m_s: 0.12
+    # 地图缓存只有新报文coord匹配时才复用；换坐标系需重启节点。
+    map_cache_file: ~/Downloads/usv_runtime_state/map_cache.json
+    # 每次启动保存一个会话，包含手动段、多个自动航次及参数快照。
+    log_directory: ~/Downloads/usv_navigation_logs
+
+    # ================= 速度 / 角速度集中调节区 =================
+    # 以下保留在ros__parameters同一层；修改后重启节点，无需重新编译。
+    # 模型辨识系数speed_gain/turn_gain保留在上方，不是提速倍率。
+
+    # 一、目标速度（m/s）：对准/缺测时还受对应上限约束。
+    # 20261006：取当前线性模型满输出速度的80%，810us × 0.00415m/s/us × 0.8。
+    # 2.6892m/s是模型外推目标，不是已测实船极速；修改动力范围/模型增益后需重新计算。
+    cruise_speed_m_s: 2.6892  # 正常巡航目标速度；转向及缺测仍降速，门前不再按距离减速
+    turn_speed_cap_m_s: 1.40  # 提高转向阶段动力：单侧有效PWM上限约675us（约83%）；实际请求仍由角速度反馈决定
+    prediction_speed_cap_m_s: 0.25  # 定位缺测推算期间目标速度上限
+
+    # 二、目标角速度与反馈响应。
+    maximum_yaw_rate_rad_s: 1.10  # 提高大角度转向目标至约63度/秒，配合转向动力上限；实际角速度需实船验证
+    heading_kp: 1.4  # 降低中小角度纠偏强度，减少转向结束后的二次修正
+    yaw_feedback_gain: 0.8  # 增强角速度误差反馈；已对准但仍旋转时更积极减小/反向差速
+    speed_feedback_gain: 0.25  # 前进速度反馈增益
+
+    # 三、动力输出范围与变化速率。
+    # 导航请求上限百分比，仍会经过执行器全局限幅。
+    maximum_command_percent: 100.0
+    maximum_differential_us: 1000.0  # 一侧2000us、另一侧1000us的最大差值
+    output_slew_rate_percent_s: 40.0  # 动力变化率，%/s；停机不经过缓升降限制
+
+    # 四、直达球门前视距离；从切自动时当前位置建立本航次直线。
+    lookahead_m: 2.0  # 增大前视距离，起步弧线偏离参考线后更平缓地回归，减少左右急纠偏
+    # 五、大角度转向的提前制动与巡航恢复条件。
+    single_motor_turn_enabled: true  # 超过进入角度单侧转向；进入/退出角度之间平滑混合双侧推进
+    # 活动侧仍受角速度反馈及动力缓升约束；提前制动可能换侧，不代表电机倒转。
+    # 预估1秒剩余转动，接近对准时提前减小差速；实船仍有过冲时小步增加。
+    yaw_brake_preview_sec: 1.00
+    # 航向误差超过约46度进入低速对准阶段；约17.2度内允许平滑恢复巡航。
+    turn_enter_angle_rad: 0.8
+    turn_exit_angle_rad: 0.30
+    # 同时要求转速低于约12.6度/秒，减少对准后低速等待；恢复后角速度反馈继续制动。
+    turn_exit_yaw_rate_rad_s: 0.22

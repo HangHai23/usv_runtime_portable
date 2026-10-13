@@ -1,0 +1,11 @@
+imu_driver:
+  ros__parameters:
+    port: /dev/myimu
+    fallback_port: /dev/ttyUSB0
+    frame_id: imu_link
+    fixed_frame: world
+
+    # The node sends this setting to the hardware on every startup, so a power
+    # cycle cannot silently return the sensor to its previous 25 Hz rate.
+    hardware_report_rate: 100
+    publish_rate: 100.0

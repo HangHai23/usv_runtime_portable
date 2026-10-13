@@ -1,0 +1,13 @@
+camera_node:
+  ros__parameters:
+    # "auto" tests every /dev/video* node and selects one that returns frames.
+    # Set /dev/videoX here only when a fixed device path is required.
+    device: auto
+    width: 1280
+    height: 720
+    fps: 30.0
+    fourcc: MJPG
+    frame_id: camera_optical_frame
+    image_topic: /camera/image_raw
+    reconnect_interval: 1.0
+    publish_rate: 30.0

@@ -1,0 +1,35 @@
+target_state_estimator:
+  ros__parameters:
+    # YOLO检测结果输入话题，包含目标框中心、面积和置信度。
+    detection_topic: /ball/detection
+    # IMU输入话题，用Z轴角速度预测两次视觉检测之间的目标方位变化。
+    imu_topic: /imu/data_raw
+    # 目标连续状态输出话题，供自动跟踪控制器和网页监控使用。
+    output_topic: /ball/target_state
+
+    # 摄像头水平视场角，单位°；用于把目标框横坐标转换成实际方位角，建议实测标定。
+    horizontal_fov_deg: 70.0
+    # 图像水平方向反转；若画面右侧目标被计算为负角度，则将此值取反。
+    camera_horizontal_reversed: false
+    # IMU偏航角速度方向反转；内部约定画面右侧为正，当前ROS IMU左转为正，因此设为true。
+    imu_yaw_rate_reversed: true
+
+    # Alpha-Beta滤波角度修正系数；调大更贴近最新检测，调小更平滑，范围0~1。
+    filter_alpha: 0.55
+    # Alpha-Beta滤波角速度修正系数；调大更快识别目标移动趋势，但可能放大检测抖动，范围0~1。
+    filter_beta: 0.08
+    # 目标自身最大方位漂移速度，单位rad/s；用于限制视觉估计出的目标移动速度异常值。
+    maximum_target_drift_rad_s: 1.0
+    # 检测离群门限，单位rad；新检测与预测偏差超过该值时暂时拒绝该检测。
+    outlier_gate_rad: 0.50
+
+    # 接受YOLO检测的最低置信度，范围0~1；低于该值的检测不参与跟踪。
+    minimum_confidence: 0.50
+    # 视觉短时中断预测时长，单位s；在此时间内使用IMU继续预测且状态保持TRACKING。
+    prediction_timeout: 0.35
+    # 目标完全丢失时间，单位s；超过该时间仍无有效检测，target_valid变为false。
+    lost_timeout: 1.00
+    # IMU有效数据超时，单位s；超时后停止使用IMU角速度进行方位预测。
+    imu_timeout: 0.20
+    # 连续目标状态发布频率，单位Hz；不受YOLO推理频率直接限制。
+    output_rate: 20.0

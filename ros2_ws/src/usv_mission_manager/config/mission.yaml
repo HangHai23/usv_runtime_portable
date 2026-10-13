@@ -1,0 +1,44 @@
+mission_manager:
+  ros__parameters:
+    camera_confidence_threshold: 0.7  # 船载相机置信度达到此值才允许接管
+    camera_confidence_hold_sec: 0.10  # 连续可靠检测0.1秒后交给视觉，减少接管等待
+    camera_detection_max_age_sec: 0.25  # 接管时YOLO原始检测允许的最大年龄
+    camera_return_confidence: 0.55  # 视觉阶段维持跟踪的最低置信度，低于接管阈值以防来回切换
+    camera_loss_return_sec: 0.2  # 无全球依据时视觉失效的阶段退出等待；有新鲜船/球位置则立即全球重对准
+    handover_radius_m: 3.0  # 距无人机球位置不超过此值，且视觉可靠，才交给船载摄像头
+    ball_approach_stop_radius_m: 1.0  # 此范围内低速全球重对准，不再停船等待相机
+    reacquire_speed_m_s: 0.60  # 提高近球/视觉丢失时全球重对准的模型前进速度；大偏角仍减速转向
+    capture_creep_area_ratio: 0.08  # 框面积达到8%即开始最低推进保护，更早保持拿球推进
+    ball_position_timeout_sec: 2.0  # 无人机球位置缓存时长，超时不再驶向旧球位
+    target_update_smoothing_gain: 0.3  # 球位置小幅更新平滑权重；不改变无人机坐标系
+    command_timeout_sec: 0.2  # 下游视觉/球门导航动力候选超时即归零
+    status_timeout_sec: 0.3  # 融合导航状态超时即归零
+    # 拿球可通过held+框面积联合确认，或无人机连续新帧的held多数票独立确认。
+    accept_drone_held: true  # 开启无人机拿球证据；false时只允许显式测试/传感器确认接口
+    drone_vote_enabled: true  # 额外独立条件：无人机多数held时不要求船载框面积达标
+    drone_vote_duration_sec: 0.08  # 新帧覆盖超过0.08秒即评估，仍至少2帧，旧帧不能续期
+    drone_vote_ratio: 0.8  # 新帧中held比例至少80%；unknown/candidate/free均计作非held
+    drone_vote_window_sec: 0.25  # 最近0.25秒窗口，尽快排除拿球前的非held票
+    drone_vote_min_frames: 2  # 至少2个不同有效新帧且覆盖>0.08秒；仍保留80%held条件，单帧不能确认
+    capture_area_ratio: 0.28  # 拿球面积条件降低至28%；仍需held联合确认或独立无人机多数票，红球模型须实测
+    capture_hold_sec: 0.05  # 联合证据稳定0.05秒确认，约一个20Hz控制周期
+    drone_held_confirm_sec: 0.05  # 本船held新帧连续确认0.05秒
+    ball_loss_confirm_sec: 0.3  # 送球时新鲜free/candidate持续此时长判定丢球，取消送球并重新拿球
+    possession_timeout_sec: 2.0  # 连续未收到新的held达到此时长，拿球状态失效并重新找球；重复帧不续期
+    capture_min_forward_percent: 30.0  # X提高至30%：近球确认、切换及送球阶段平均正向动力下限；不是实测船速，0关闭
+    capture_handover_timeout_sec: 2.0  # 切换时持续推进等待首条导航指令，最多2秒；正常首条到达立即接管
+    # 所有联合自动阶段的疑似受阻脱困；不是已确认撞到场地边界。手动/急停优先。
+    stuck_recovery_enabled: true  # 启用位置不变检测与一前一后转向；双向电调才允许执行
+    stuck_detection_sec: 1.0  # 实际前进动力持续且不同新帧覆盖超过1秒才检查受阻
+    stuck_position_tolerance_m: 0.10  # 此期间相对起点位移均不超过10cm，认为无明显变化
+    stuck_min_forward_percent: 10.0  # 指令和PWM实际平均正向动力均至少10%才开始计时
+    stuck_position_max_age_sec: 0.5  # 无人机测量位置最大年龄；缺失/重复帧不能触发脱困
+    stuck_turn_percent: 35.0  # 脱困左右分别+35%/-35%，临时覆盖拿球后的禁止倒转限制
+    stuck_turn_direction: right  # right左前右后，left左后右前
+    stuck_turn_duration_sec: 1.0  # 每次反向差速最多执行1秒，然后恢复当前任务
+    stuck_turn_angle_rad: 0.8  # IMU累计转角达到约46度也结束，时间/角度先到者优先
+    stuck_cooldown_sec: 2.0  # 每次脱困后冷却2秒，再重新收集1秒前进位置证据
+    capture_topic: /mission/ball_captured  # 备用传感器/台架确认Bool上升沿；自动联合确认不依赖此话题
+    external_capture_override_enabled: false  # 默认不允许外部信号绕过联合确认；仅台架验证时显式开启
+    log_directory: ~/Downloads/usv_mission_logs  # 参数快照、原始输入、切换及最终动力输出
+    output_rate: 20.0  # 自动动力选择与任务状态发布频率

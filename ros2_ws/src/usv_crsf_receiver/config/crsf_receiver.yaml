@@ -1,0 +1,7 @@
+crsf_receiver:
+  ros__parameters:
+    port: /dev/ttyTHS1
+    baudrate: 420000
+    publish_rate: 50.0
+    frame_timeout: 0.5
+    frame_id: crsf_receiver
