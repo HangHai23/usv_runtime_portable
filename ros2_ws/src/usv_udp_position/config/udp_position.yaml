@@ -10,6 +10,7 @@ udp_position_receiver:
     poll_budget_ms: 2.0
     # 必填Mac IPv4地址；空字符串拒绝全部数据。UDP来源IP不是身份认证。
     allowed_sender_ip: "127.0.0.1"  # 部署前必须改为实际Mac IPv4；不能填Jetson目标地址
+    ball_type: red  # red红球 / multicolor彩球；同时决定YOLO模型，修改后重启整个系统
     # 默认全局笛卡尔坐标系；单位米，不把经纬度当作x/y。
     frame_id: map
     # 发布含测量时间和接收时间的全局位置消息。

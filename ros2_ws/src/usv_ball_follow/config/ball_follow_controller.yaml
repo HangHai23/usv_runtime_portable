@@ -11,6 +11,10 @@ ball_follow_controller:
     # 使用导航同款动力模型；下列为当前导航参数副本，导航后续修改时需同步。
     navigation_model_enabled: true
     bidirectional_enabled: true  # 允许自动差速内侧倒转；0动力由执行器映射1500us
+    alignment_pivot_enabled: true  # 未拿球且失准时先一前一后原地对准，再前进
+    alignment_enter_angle_deg: 15.0  # 偏角达到15度进入原地对准
+    alignment_exit_angle_deg: 7.0  # 偏角缩小至7度恢复前进，滞回避免反复切换
+    alignment_pivot_percent: 35.0  # 恢复原地对准每侧最大动力35%
     cruise_speed_m_s: 1.6892  # 恢复原巡航目标，居中约80%共同动力；实际速度由实船决定
     speed_gain_m_s_per_us: 0.00415  # 有效PWM增量到前进速度的模型增益，m/s/us
     turn_gain_rad_s_per_us: 0.00335  # 左右有效PWM差到角速度的模型增益，rad/s/us
@@ -20,13 +24,13 @@ ball_follow_controller:
     # 目标偏角死区，单位rad；当前0.035约为2°，减小后小偏差响应更灵敏，但更容易抖动。
     bearing_deadband_rad: 0.035
     # 偏角外环比例增益：把目标偏角转换为期望偏航角速度；调大后转向更积极。
-    bearing_kp: 3.8  # 提高小中偏角转向响应，在接近小球过程中更快对准
+    bearing_kp: 3.8  # 恢复原偏角转向增益，提高对准响应
     # 期望偏航角速度上限，单位rad/s；限制大角度目标对应的最高转向速度。
-    maximum_yaw_rate_rad_s: 1.2  # 提高目标转速至约86度/秒；实际能力受电机及船体限制
+    maximum_yaw_rate_rad_s: 1.2  # 恢复原目标转速上限，约69度/秒
 
     # 角速度内环比例增益：根据“期望角速度-IMU实际角速度”计算差速转向量。
-    yaw_rate_kp: 66.0  # 大偏角且静止时单侧请求最高约73%，增强对准动力；不是导航PWM增益的直接复制
-    yaw_brake_preview_sec: 0.45  # 缩短提前制动，避免尚未对准就过早压低转向动力
+    yaw_rate_kp: 66.0  # 恢复原角速度反馈增益
+    yaw_brake_preview_sec: 0.45  # 恢复原提前制动时长
     # 最大差速转向量，单位%；调大可增强转向，但过大会导致过冲或振荡。
     maximum_steering_percent: 100.0
     # IMU偏航角速度方向反转：内部约定右转为正，而当前ROS IMU左转为正，因此设为true。

@@ -18,7 +18,7 @@ class UdpPositionNode(Node):
     def __init__(self):
         super().__init__('udp_position_receiver')
         for key, value in [('bind_address', '0.0.0.0'), ('port', 5700),
-                           ('allowed_sender_ip', ''), ('frame_id', 'map'),
+                           ('allowed_sender_ip', ''), ('frame_id', 'map'), ('ball_type', 'red'),
                            ('output_topic', '/usv/global_position'), ('boat_id', 0),
                            ('publish_position', False), ('clock_synchronized', False),
                            ('observation_publish_rate_hz', 30.0), ('poll_budget_ms', 2.0),
@@ -51,7 +51,8 @@ class UdpPositionNode(Node):
             raise ValueError('Position fusion requires verified clock_synchronized=true')
         if len(self._offset)!=2 or not all(math.isfinite(v) for v in [*self._offset,self._delay,self._network,self._heading]) or self._delay<0 or self._network<=0 or self._boat_id<0:
             raise ValueError('Invalid calibration/timing parameters')
-        self._state = ReceiverState()
+        self._state = ReceiverState(str(self.get_parameter('ball_type').value))
+        self.get_logger().info(f'Selected ball type: {self._state.ball_type}')
         self._last_frame = None
         self._received = None
         self._sender = ''
@@ -138,7 +139,7 @@ class UdpPositionNode(Node):
         boat = next((b for b in observation['boats'] if b['id']==self._boat_id), None) if observation else None
         valid = boat is not None and boat.get('xy_m') is not None and boat.get('tag_heading_deg') is not None
         self._valid_pub.publish(Bool(data=valid))
-        report = dict(valid=valid, reset_required=self._state.reset_required,
+        report = dict(valid=valid, ball_type=self._state.ball_type, reset_required=self._state.reset_required,
                       stream_generation=self._state.generation,
                       session=self._state.session, coord=self._state.coord,
                       seq=self._state.seq, observation=observation,

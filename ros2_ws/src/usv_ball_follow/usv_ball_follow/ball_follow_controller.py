@@ -16,6 +16,7 @@ from usv_interfaces.msg import BallTargetState, PropulsionCommand
 
 from .control_math import (
     clamp,
+    alignment_active,
     desired_yaw_rate,
     mix_same_direction_or_pivot,
     scheduled_throttle,
@@ -46,6 +47,17 @@ class BallFollowController(Node):
         self.declare_parameter("target_timeout", 0.20)
         self.declare_parameter("imu_timeout", 0.20)
         self.declare_parameter("output_rate", 20.0)
+        self.declare_parameter("alignment_pivot_enabled", False)
+        self.declare_parameter("alignment_enter_angle_deg", 15.0)
+        self.declare_parameter("alignment_exit_angle_deg", 7.0)
+        self.declare_parameter("alignment_pivot_percent", 35.0)
+        self._alignment = False
+        self._pivot_enabled = bool(self.get_parameter('alignment_pivot_enabled').value)
+        self._pivot_enter = math.radians(float(self.get_parameter('alignment_enter_angle_deg').value))
+        self._pivot_exit = math.radians(float(self.get_parameter('alignment_exit_angle_deg').value))
+        self._pivot_limit = float(self.get_parameter('alignment_pivot_percent').value)
+        if not (0 < self._pivot_exit < self._pivot_enter <= math.pi and 0 < self._pivot_limit <= 100):
+            raise ValueError('invalid alignment angles/power')
         self.declare_parameter("navigation_model_enabled", False)
         self.declare_parameter("bidirectional_enabled", False)
         self._bidirectional = bool(self.get_parameter("bidirectional_enabled").value)
@@ -155,6 +167,7 @@ class BallFollowController(Node):
             self._last_imu = time.monotonic()
 
     def _publish_zero(self) -> None:
+        self._alignment = False
         self._outputs = [0.0, 0.0]
         self._publish_command(0.0, 0.0)
         self._desired_rate_publisher.publish(Float32(data=0.0))
@@ -187,6 +200,8 @@ class BallFollowController(Node):
             self._publish_zero()
             return
 
+        self._alignment = self._pivot_enabled and self._bidirectional and alignment_active(
+            self._alignment, float(target.bearing_rad), self._pivot_enter, self._pivot_exit)
         desired_rate = desired_yaw_rate(
             float(target.bearing_rad) - self._yaw_preview * yaw_rate,
             self._deadband, self._bearing_kp, self._max_yaw_rate
@@ -229,10 +244,20 @@ class BallFollowController(Node):
             lower = -100 if self._bidirectional else 0
             left_target = clamp(left_us / self._model["command_span_us"] * 100, lower, 100)
             right_target = clamp(right_us / self._model["command_span_us"] * 100, lower, 100)
-            if float(target.area_ratio) >= self._stop_area:
+            if float(target.area_ratio) >= self._stop_area and not self._alignment:
                 self._publish_zero()
                 return
         maximum_delta = self._slew_rate / self._output_rate
+        if self._alignment:
+            # Remove common propulsion; slew only the signed differential.
+            requested = clamp((left_target-right_target)/2, -self._pivot_limit, self._pivot_limit)
+            turn = slew((self._outputs[0]-self._outputs[1])/2, requested, maximum_delta)
+            turn = clamp(turn, -self._pivot_limit, self._pivot_limit)
+            self._outputs = [turn, -turn]
+            self._publish_command(turn, -turn)
+            self._desired_rate_publisher.publish(Float32(data=float(desired_rate)))
+            self._active_publisher.publish(Bool(data=True))
+            return
         left = slew(self._outputs[0], left_target, maximum_delta)
         right = slew(self._outputs[1], right_target, maximum_delta)
         self._outputs = [left, right]

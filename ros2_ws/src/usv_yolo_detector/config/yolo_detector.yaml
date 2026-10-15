@@ -3,6 +3,8 @@ yolo_detector:
     # FP16 TensorRT engine built locally on this Jetson (TRT 10.3, batch 1).
     engine_path: models/red_ball_yolo11n.onnx  # 原版Nano默认ONNX CPU；彩球使用models/colored_ball_v2_yolo11n.onnx
     onnx_threads: 2  # 预留CPU给IMU/遥控/控制与网页，不将推理线程开满
+    red_engine_path: models/red_ball_yolo11n.onnx  # launch根据统一ball_type覆盖engine_path
+    multicolor_engine_path: models/colored_ball_v2_yolo11n.onnx
     image_topic: /camera/image_raw
     detection_topic: /ball/detection
     debug_image_topic: /ball/debug_image

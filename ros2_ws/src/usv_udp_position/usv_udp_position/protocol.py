@@ -7,7 +7,10 @@ import time
 
 
 class ReceiverState:
-    def __init__(self):
+    def __init__(self, ball_type='red'):
+        if ball_type not in ('red', 'multicolor'):
+            raise ValueError('ball_type must be red or multicolor')
+        self.ball_type = ball_type
         self.session=None;self.retired=set();self.seq=-1;self.coord=None
         self.latest=None;self.deadline=0
         self.reset_required=False;self.frame=-1
@@ -38,10 +41,27 @@ class ReceiverState:
                 if not isinstance(obs,dict) or not isinstance(obs.get('coord'),str):return False
                 if len(obs['coord'])!=32 or any(c not in '0123456789abcdefABCDEF' for c in obs['coord']):return False
                 if type(obs.get('field_valid'))!=bool or not isinstance(obs.get('boats'),list):return False
-                if not isinstance(obs.get('ball'),dict) or not isinstance(obs.get('goals'),list):return False
                 def point(v):
                     return v is None or (isinstance(v,list) and len(v)==2 and
                         all(type(x) in (int,float) and math.isfinite(x) for x in v))
+                # Normalize the selected typed target for existing downstream consumers.
+                # Never fall back to a different color when the selected target is absent.
+                if 'balls' in obs:
+                    balls = obs['balls']
+                    if not isinstance(balls,dict):return False
+                    for kind, ball in balls.items():
+                        if kind not in ('red','multicolor'):continue
+                        if not isinstance(ball,dict) or not point(ball.get('xy_m')):return False
+                        if ball.get('state') not in ('detected','predicted','lost'):return False
+                        if ball.get('state')!='detected' and ball.get('xy_m') is not None:return False
+                        if ball.get('xy_m') is not None and not obs['field_valid']:return False
+                        if type(ball.get('score')) not in (int,float) or not math.isfinite(ball['score']):return False
+                    obs['ball'] = balls.get(self.ball_type,dict(state='lost',xy_m=None,score=0.))
+                elif self.ball_type != 'red':
+                    # The legacy ball field identifies only the original red target.
+                    obs['ball'] = dict(state='lost',xy_m=None,score=0.)
+                obs['ball_type'] = self.ball_type
+                if not isinstance(obs.get('ball'),dict) or not isinstance(obs.get('goals'),list):return False
                 if not point(obs['ball'].get('xy_m')):return False
                 if obs['ball'].get('xy_m') is not None and not obs['field_valid']:return False
                 if obs['ball'].get('state') not in ('detected','predicted','lost'):return False

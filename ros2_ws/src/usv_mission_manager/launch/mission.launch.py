@@ -51,6 +51,16 @@ def generate_launch_description():
     goal['command_forward_only'] = True
     goal['goal_side'] = LaunchConfiguration('goal_side')
     manager = dict(nav, **mission)
+    # One set of alignment thresholds for camera and global reacquisition.
+    for key in ('alignment_pivot_enabled', 'alignment_enter_angle_deg',
+                'alignment_exit_angle_deg', 'alignment_pivot_percent'):
+        manager[key] = follow[key]
+    for key, source in (('alignment_bearing_kp','bearing_kp'),
+                        ('alignment_yaw_rate_kp','yaw_rate_kp'),
+                        ('alignment_yaw_preview_sec','yaw_brake_preview_sec'),
+                        ('alignment_maximum_yaw_rate','maximum_yaw_rate_rad_s'),
+                        ('alignment_imu_yaw_rate_reversed','imu_yaw_rate_reversed')):
+        manager[key] = follow[source]
     return LaunchDescription([
         DeclareLaunchArgument('goal_side', default_value=nav['goal_side']),
         DeclareLaunchArgument('web_port', default_value='8080'),

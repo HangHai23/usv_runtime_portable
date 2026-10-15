@@ -9,6 +9,11 @@ def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
 
 
+def alignment_active(active, bearing, enter, exit_angle):
+    """Hysteresis for pivot-before-forward; angles are radians."""
+    return abs(bearing) > exit_angle if active else abs(bearing) >= enter
+
+
 def pixel_center_to_bearing(
     normalized_center_x: float, horizontal_fov_rad: float, reversed_axis: bool = False
 ) -> float:

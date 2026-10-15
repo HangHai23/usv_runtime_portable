@@ -159,3 +159,47 @@ class StuckRecovery:
             self.reset_window()
             return True
         return False
+
+
+class ManualEscape:
+    """Explicit trigger only: IMU net-angle pivot, then a bounded forward arc."""
+    def __init__(self):
+        self.phase = 'idle'
+        self.started = self.last_tick = 0.
+        self.turned = 0.
+        self.reason = None
+
+    def trigger(self, now):
+        if self.phase != 'idle':
+            return False
+        self.phase, self.started, self.last_tick = 'rotate', now, now
+        self.turned, self.reason = 0., None
+        return True
+
+    def cancel(self, reason='safety_stop'):
+        self.phase, self.reason = 'idle', reason
+
+    def step(self, now, rate, allowed, c):
+        if self.phase == 'idle':
+            return None
+        if not allowed:
+            self.cancel()
+            return [0., 0.]
+        dt = max(0., min(.2, now-self.last_tick))
+        self.last_tick = now
+        sign = 1 if c['escape_direction'] == 'left' else -1
+        if self.phase == 'rotate':
+            self.turned += sign*rate*dt
+            if self.turned >= math.radians(c['escape_rotation_deg']):
+                self.phase, self.started = 'arc', now
+            elif now-self.started >= c['escape_rotation_timeout_sec']:
+                self.cancel('rotation_timeout')
+                return [0., 0.]
+            else:
+                power = c['escape_rotation_percent']
+                return [-sign*power, sign*power]
+        if now-self.started >= c['escape_arc_duration_sec']:
+            self.cancel('complete')
+            return None
+        speed, turn = c['escape_forward_percent'], c['escape_arc_steering_percent']
+        return [max(0., min(100., speed-sign*turn)), max(0., min(100., speed+sign*turn))]

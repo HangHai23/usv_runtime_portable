@@ -35,6 +35,7 @@ source "$PROJECT_DIR/ros2_ws/install/setup.bash"
 set -u
 cd "$PROJECT_DIR/ros2_ws"
 echo "拿球进门任务：CH8低位手动、高位自动；CH5高位急停。目标球门：$GOAL_SIDE"
+echo "自动模式下本终端按B主动脱困，无需回车；默认DRY_RUN=true不输出真实动力。"
 exec python3 "$PROJECT_DIR/tools/start_monitored_mission.py" \
     --project-dir "$PROJECT_DIR" --goal-side "$GOAL_SIDE" \
     --web-port "${WEB_PORT:-8080}" --dry-run "${DRY_RUN:-true}"

@@ -1,5 +1,7 @@
 # USV Runtime Portable — 原版Jetson Nano移植版
 
+2026-10-15代码更新：见[更新点、对应文件与升级步骤](docs/update_20261015.md)。包含最新联合控制职责修正、3秒丢球缓冲、持续搜索、B键脱困及红球/彩球统一选择，保留Nano ONNX和默认dry-run适配。
+
 从`HangHai23/usv_project`当前实地开发版本整理的独立正式运行仓库。包含自动追球、球门导航、找球→拿球→送球联合控制及全部运行依赖源码、网页、配置、两种ONNX模型。原开发仓库和已有远程地址不变。
 
 **重要：这不是“复制Orin的install/engine就能在原版Nano跑”。** 原版Nano的官方JetPack 4基于Ubuntu 18.04，而本项目使用ROS 2 Humble/Python 3.10。这里采用Ubuntu 22.04/Humble ARM64容器＋ONNX Runtime CPU后端，避免依赖Orin的TensorRT 10.3、CUDA 12和PyTorch。目标Nano实机性能、容器兼容及航行安全仍需验收，不能声称已在Nano验证。

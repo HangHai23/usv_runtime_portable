@@ -45,6 +45,7 @@ def start(args):
                                     '--output-directory', str(output), '--web-port', str(args.web_port),
                                     '--config', str(config_path)],
                                    stdout=monitor_log, stderr=monitor_log, start_new_session=True)
+    keyboard = None
     try:
         deadline = time.monotonic()+5.
         while not (output/'ready.json').exists():
@@ -58,8 +59,15 @@ def start(args):
         print(f'本次系统级日志：{output}', flush=True)
         print('系统采样独立运行；完整ROS终端输出保存在该目录的 ros/ 下。', flush=True)
         os.chdir(project/'ros2_ws')
+        if sys.stdin.isatty():
+            keyboard = subprocess.Popen(
+                [sys.executable, str(project/'tools/mission_escape_keyboard.py'),
+                 '--watch-parent', str(os.getpid())], env=env)
         os.execvpe(command[0], command, env)
     except BaseException:
+        if keyboard is not None and keyboard.poll() is None:
+            keyboard.terminate()
+            keyboard.wait(timeout=3.)
         if monitor.poll() is None:
             monitor.terminate()  # only our sampler, no ROS nodes have been started by us
             try:
